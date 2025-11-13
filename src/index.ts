@@ -1,7 +1,7 @@
 import { connectToMongoDb } from "./mongo";
 import express from "express";
 import rutasAuth from "./routes/auth";
-import rutasPatata from "./routes/patata";
+import rutasPatata from "./routes/products";
 import {Db, MongoClient} from "mongodb";
 
 

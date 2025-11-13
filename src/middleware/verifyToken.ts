@@ -6,8 +6,8 @@ dotenv.config();
 
 const SECRET = process.env.SECRET;
 
-export interface AuthRequest extends Request { //si el middleware esta bien, se ejecutará esto
-    user?: string | jwt.JwtPayload; //los datos que te devuelven jwt, es como un json
+export interface AuthRequest extends Request {
+    user?: string | jwt.JwtPayload; 
 };
 
 
