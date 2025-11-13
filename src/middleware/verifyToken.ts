@@ -6,8 +6,8 @@ dotenv.config();
 
 const SECRET = process.env.SECRET;
 
-export interface AuthRequest extends Request {
-    user?: string | jwt.JwtPayload;
+export interface AuthRequest extends Request { //si el middleware esta bien, se ejecutará esto
+    user?: string | jwt.JwtPayload; //los datos que te devuelven jwt, es como un json
 };
 
 
@@ -16,7 +16,7 @@ export const verifyToken = (req: AuthRequest, res: Response, next: NextFunction)
     const token = authHeader && authHeader.split(" ")[1];
 
     if(!token){
-        res.status(401).json({ message: "Access token is missing" });
+        res.status(401).json({ message: "No hay token" });
         return;
     };
 
