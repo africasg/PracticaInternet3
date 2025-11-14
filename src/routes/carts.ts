@@ -3,8 +3,6 @@ import {Router} from "express";
 import dotenv from "dotenv";
 import { ObjectId } from "mongodb";
 import { getDB } from "../mongo";
-import bcrypt from "bcryptjs";
-import jtw from "jsonwebtoken";
 import { AuthRequest, verifyToken } from "../middleware/verifyToken";
 dotenv.config();
 
@@ -13,45 +11,60 @@ const coleccionCarts = () => getDB().collection<Carts>("carts");
 const coleccionUsers = () => getDB().collection<Users>("usuarios");
 const coleccionProducts = () => getDB().collection<Product>("products");
 
-router.get("/",verifyToken,async (req:AuthRequest,res)=>{
-    const username = req.user;
-    const users = await coleccionUsers();
-    const usuario = await coleccionUsers().findOne({username});
-    const idUser = usuario?._id;
+type UserJwt = {
+    id:string,
+    email:string
+}
 
+
+router.get("/",verifyToken,async (req:AuthRequest,res)=>{
+    try{
+    const usuario = req.user as UserJwt
+    const userId = new ObjectId(usuario.id)
+    
     const carts = await coleccionCarts();
-    const cart = await coleccionCarts().findOne({userId: idUser});
+    const cart = await carts.findOne({userId: userId});
 
     res.status(200).json({cart});
+} catch (error){
+    console.error("Get /api/cart error", error);
+    res.status(500).json({message:"Error interno"})
+}
+
 })
 
-router.put("/add",async (req:AuthRequest,res)=>{
+router.put("/add",verifyToken, async (req:AuthRequest,res)=>{
     try{
-        const user = await coleccionUsers().findOne({username:req.user});
-        let userId = new ObjectId;
-        user ? userId = user._id : new ObjectId()
-
+        const usuario = req.user as UserJwt
+        const userId = new ObjectId(usuario.id)
+        if((!req.body.id && !req.body.quantity) || typeof(req.body) !== "object"){
+        return res.status(400).json({ message: "Invalid JSON body" });
+        }
         const { id,quantity } = req.body as {id:string, quantity:number};
         if(!id||!quantity||quantity<=0){
             return res.status(400).json({message:"Datos inválidos"});
         }
         const producto = await coleccionProducts().findOne({_id:new ObjectId(id)})
         if(!producto){
-             return res.status(404).json({message:"No existe el producto "}); //mirar
+             return res.status(404).json({message:"Product not found"}); 
         }
-
         if(producto.stock < quantity){
             return res.status(400).json({message:"Insufficient stock"}); 
         }
-        const result = await coleccionProducts().updateOne(
-            {_id:new ObjectId(id)},
-            {$inc:{stock: -quantity}} // se resta la cantidad del stock
-        );
+        const result = await coleccionProducts().updateOne( { _id: new ObjectId(id) },{ $inc: { stock: -quantity } });
 
-        const carritos = await coleccionCarts().findOne({userId})
-        carritos?.items.push({quantity:quantity, idProducto: new ObjectId(id)});
-        
-        res.json({message: "Stock actualizado correctamente " , cart:result });
+        let carrito = await coleccionCarts().findOne({ userId });
+        if(!carrito){
+            const carritos = {
+                _id: new ObjectId,
+                userId: userId,
+                items: []
+            }
+            await coleccionCarts().insertOne(carritos)
+        }
+        await coleccionCarts().updateOne({ userId }, { $push: { items: { idProducto: new ObjectId(id), quantity } } });
+
+    res.json({message: "Stock actualizado correctamente " , cart:result });
     
     }catch(error){
         console.error(error);

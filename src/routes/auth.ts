@@ -1,6 +1,5 @@
 import {Router} from "express";
 import dotenv from "dotenv";
-import type { ObjectId } from "mongodb";
 import { getDB } from "../mongo";
 import bcrypt from "bcryptjs";
 import jtw from "jsonwebtoken";
@@ -15,13 +14,31 @@ const coleccionUsers = () => getDB().collection<Users>("users");
 
 router.post("/register", async (req,res)=>{
     try{
+        if((!req.body.email && !req.body.password && !req.body.username) || typeof(req.body) !== "object"){
+        return res.status(400).json({ message: "Invalid JSON body" })}
         const {username,email,passwordHash} = req.body as Users; 
+
+        if(!username || typeof username !== "string" ){
+            return res.status(400).json({message: "El campo 'username' es obligatorio y debe ser string"});
+        }
+
+        if(!email || typeof email !== "string"){
+            return res.status(400).json({message: "El campo 'email' es obligatorio y debe ser string"});
+        }
+
+        if(!email.endsWith("@gmail.com")){
+            return res.status(400).json({message: "Formato de email inválido, debe terminar en @gmail.com"});
+        }
+
+        if(!passwordHash || typeof passwordHash !== "string"){
+            return res.status(400).json({message: "Campo 'password' es obligatorio y debe ser string"});
+        }
         const users = await coleccionUsers();
         const existing = await users.findOne({email}) 
         if (existing){
             return res.status(409).json({error: "El usuario o email ya existe"});
         }
-        //para encriptar (bcrypt : encriptacion muy basica pero buena)
+        
         const passToEncripta = await bcrypt.hash(passwordHash,10);
         const fecha : Date = new Date;
         await users.insertOne({username, email, passwordHash: passToEncripta, createdAt:fecha})
@@ -35,6 +52,9 @@ router.post("/register", async (req,res)=>{
 
     router.post("/login", async(req,res)=>{
         try{
+            if((!req.body.email && !req.body.password) || typeof(req.body) !== "object"){
+            return res.status(400).json({ message: "Invalid JSON body" })}
+
             const {email,passwordHash} = req.body as Users;
             const users = await coleccionUsers();
             const user = await users.findOne({email});
@@ -47,9 +67,7 @@ router.post("/register", async (req,res)=>{
             const token = jtw.sign({id:user._id?.toString(),email:user.email},SECRET as string,{
                 expiresIn: "1h"
             });
-             res.status(200).json({token:token})   
-            // res.json({message: "Login completado ESTAS DENTRO", token})
-        }  
+             res.status(200).json({token:"Bearer " + token})   ; }  
 
     catch(err){
         res.status(404).json({message:err})
