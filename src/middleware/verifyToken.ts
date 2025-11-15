@@ -16,7 +16,7 @@ export const verifyToken = (req: AuthRequest, res: Response, next: NextFunction)
     const token = authHeader && authHeader.split(" ")[1];
 
     if(!token){
-        res.status(401).json({ message: "Token inválido" });
+        res.status(401).json({ message: "Token inválido" }); //token no existente, utilizo error 401 ya que no está especificado
         return;
     };
 
