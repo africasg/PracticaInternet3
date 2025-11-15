@@ -7,7 +7,7 @@ dotenv.config();
 const SECRET = process.env.SECRET;
 
 export interface AuthRequest extends Request {
-    user?: string | jwt.JwtPayload;
+    user?: string | jwt.JwtPayload; 
 };
 
 
@@ -16,13 +16,13 @@ export const verifyToken = (req: AuthRequest, res: Response, next: NextFunction)
     const token = authHeader && authHeader.split(" ")[1];
 
     if(!token){
-        res.status(401).json({ message: "Access token is missing" });
+        res.status(401).json({ message: "Token inválido" }); //token no existente, utilizo error 401 ya que no está especificado
         return;
     };
 
     jwt.verify(token, SECRET as string, (err, decoded) => {
         if(err){
-            res.status(403).json({ message: "Invalid access token" });
+            res.status(401).json({ message: "Token inválido" });
             return;
         }
         req.user = decoded;
